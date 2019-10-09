@@ -1,0 +1,102 @@
+
+R version 3.6.1 (2019-07-05) -- "Action of the Toes"
+Copyright (C) 2019 The R Foundation for Statistical Computing
+Platform: x86_64-pc-linux-gnu (64-bit)
+
+R is free software and comes with ABSOLUTELY NO WARRANTY.
+You are welcome to redistribute it under certain conditions.
+Type 'license()' or 'licence()' for distribution details.
+
+  Natural language support but running in an English locale
+
+R is a collaborative project with many contributors.
+Type 'contributors()' for more information and
+'citation()' on how to cite R or R packages in publications.
+
+Type 'demo()' for some demos, 'help()' for on-line help, or
+'help.start()' for an HTML browser interface to help.
+Type 'q()' to quit R.
+
+> # To try this out, it would be good to have NetCDF files (or whatever format you
+> # would prefer) that has the following data…
+> #
+> # Area 48 Small-Scale Management Unit, month (over time series of chlorophyll
+> # data), mean total chlorophyll, mean temperature, mean coverage of sea ice
+> # (<20%, 20-50%, 50-75%, 75-95%, >95%), surface area of water crossing the
+> # boundaries of the SSMUs.
+> #
+> # Ancillary data needed for the modelling will be the length of the boundaries
+> # between the SSMUs.
+> #
+> 
+> library(SOmap)
+Loading required package: raster
+Loading required package: sp
+> x <- SOmap_data$CCAMLR_SSMU
+> ex <- extent(spTransform(x, "+proj=longlat")) + 1
+> ## map seawifs and modis bins to ssmu polys
+> library(croc)
+Loading required package: dplyr
+
+Attaching package: ‘dplyr’
+
+The following objects are masked from ‘package:raster’:
+
+    intersect, select, union
+
+The following objects are masked from ‘package:stats’:
+
+    filter, lag
+
+The following objects are masked from ‘package:base’:
+
+    intersect, setdiff, setequal, union
+
+> modis_bins <- tibble::tibble(bin_num = crop_init(initbin(NUMROWS = 4320), ex))
+> modis_bins[c("lon", "lat")] <- croc::bin2lonlat(modis_bins$bin_num, 4320)
+> modis_bins$poly <- sp::over(SpatialPoints(rgdal::project(as.matrix(modis_bins[c("lon", "lat")]),
++                                                projection(x)), proj4string = CRS(projection(x))), as(x, "SpatialPolygons"))
+> modis_bins <- dplyr::filter(modis_bins, !is.na(poly))
+> 
+> ## group daily files by month
+> library(raadtools)
+global option 'raadfiles.data.roots' set:
+'/rdsi/PRIVATE/raad/data               2019-10-09 14:35:13
+ /rdsi/PRIVATE/raad/data_local         2019-10-09 14:38:32
+ /rdsi/PRIVATE/raad/data_staging       2019-10-09 14:38:33
+ /rdsi/PRIVATE/raad/data_deprecated    2019-10-09 14:41:12
+ /rdsi/PUBLIC/raad/data                2019-10-09 14:57:34'
+Uploading raad file cache as at 2019-10-09 15:23:15 (1018905 files listed) 
+
+Warning message:
+In fun(libname, pkgname) :
+  rgeos: versions of GEOS runtime 3.7.1-CAPI-1.11.1
+and GEOS at installation 3.7.0-CAPI-1.11.0differ
+> library(dplyr)
+> files <- oc_sochla_files() %>% mutate(month = format(date, "%Y-%m")) %>% group_by(month)
+> 
+> library(furrr)
+Loading required package: future
+
+Attaching package: ‘future’
+
+The following object is masked from ‘package:raster’:
+
+    values
+
+> #plan(sequential)
+> plan(multicore)
+> library(purrr)
+> read_modis <- function(x, ...) {
++   future_map_dfr(x$date, ~read_oc_sochla(.x, bins = modis_bins, inputfiles = files)) %>% group_by(poly) %>%
++     summarize(chla = mean(chla_johnson), nbins = n())
++ }
+> 
+> modis_chla <- files %>% group_split() %>% future_map(read_modis)
+> 
+> saveRDS(modis_chla, "modis_chla.rds")
+> ## read months at a time, careful to map seawifs or modis bins for filter
+> 
+> proc.time()
+    user   system  elapsed 
+2342.609  315.956 3514.814 
