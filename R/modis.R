@@ -11,14 +11,15 @@
 #
 
 library(SOmap)
-x <- SOmap_data$CCAMLR_SSMU
-ex <- extent(spTransform(x, "+proj=longlat")) + 1
+library(sf)
+x <- as(readRDS("/perm_storage/home/mdsumner/Git/future-krill/shapes/Area_48_Krill_Domain.rds"), "Spatial")
+ex <- extent(x) + 1
 ## map seawifs and modis bins to ssmu polys
 library(croc)
 modis_bins <- tibble::tibble(bin_num = crop_init(initbin(NUMROWS = 4320), ex))
 modis_bins[c("lon", "lat")] <- croc::bin2lonlat(modis_bins$bin_num, 4320)
-modis_bins$poly <- sp::over(SpatialPoints(rgdal::project(as.matrix(modis_bins[c("lon", "lat")]),
-                                               projection(x)), proj4string = CRS(projection(x))), as(x, "SpatialPolygons"))
+modis_bins$poly <- sp::over(SpatialPoints(as.matrix(modis_bins[c("lon", "lat")]) ,
+                                          proj4string = CRS(projection(x))), as(x, "SpatialPolygons"))
 modis_bins <- dplyr::filter(modis_bins, !is.na(poly))
 
 ## group daily files by month
