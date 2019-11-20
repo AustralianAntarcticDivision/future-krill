@@ -8,17 +8,47 @@ library(silicate)
 arc <- ARC(x)
 
 files <- raadfiles::altimetry_currents_polar_files()
+
+
+## TEMPORARY UNTIL CACHE REBUILDS
+files0 <- fs::dir_ls("/rdsi/PRIVATE/raad/data_local/aad.gov.au/currents/polar", regex = ".*\\.grd$", recurse = TRUE)
+
+
+files <- tibble::tibble(ufullname = grep("polar_u", files0, value = TRUE), vfullname = grep("polar_v", files0, value = TRUE))
+files$date <- as.POSIXct(as.Date(stringr::str_extract(basename(files0), "[0-9]{8}"),
+                                 "%Y%m%d"),tz = "UTC")[grep("polar_u", files0)]
+
+##
+
+
 ifile <- 1
 
 curr <- brick(raster(files$ufullname[ifile]), raster(files$vfullname[ifile]))
-cells <- tibble::tibble(cell = cellFromXY(curr, as.matrix(reproj::reproj(arc, projection(curr))$vertex[c("x_", "y_")])),
-                        vertex = arc$vertex$vertex_)
+arc_to_sp <- function(x) {
+  l <- split(x$arc_link_vertex, x$arc_link_vertex$arc_)[unique(x$arc_link_vertex$arc_)]
 
+  for (i in seq_along(l)) {
+    l[[i]] <- sp::Lines(list(sp::Line(as.matrix(dplyr::inner_join(l[[i]], arc$vertex, "vertex_") %>% dplyr::select(x_, y_)))), ID = i)
+  }
+  sp::SpatialLines(l, proj4string = raster::crs(x$meta$proj[1]))
+}
+
+sp <- arc_to_sp(arc)
+
+cells <- tabularaster::cellnumbers(curr, sf::st_transform(sf::st_as_sf(sp), projection(curr)))
+
+xy <- xyFromCell(curr, cells$cell_)
 l <- vector("list", nrow(files))
-for (ifile in seq_len(nrow(files))) {
-  curr <- brick(raster(files$ufullname[ifile]), raster(files$vfullname[ifile]))
-  l[[ifile]] <- extract(curr, cells$cell)
+
+for (ifile in seq_along(l)) {
+  curr <- try(brick(raster(files$ufullname[ifile]), raster(files$vfullname[ifile])))
+  if (inherits(curr, "try-error")) next;
+  l[[ifile]] <- extract(curr, cells$cell_)
   if (ifile %% 500 == 0) print(ifile)
+
+  # plot(xy, col = colourvalues::colour_values(vfun(l[[ifile]])),
+  #      pch = 19, cex = .4)
+  #
 }
 
 saveRDS(l, "currents.rds")

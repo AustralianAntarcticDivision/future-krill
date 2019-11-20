@@ -5,7 +5,8 @@
 # data), mean total chlorophyll, mean temperature, mean coverage of sea ice
 # (<20%, 20-50%, 50-75%, 75-95%, >95%), surface area of water crossing the
 # boundaries of the SSMUs.
-#
+
+
 # Ancillary data needed for the modelling will be the length of the boundaries
 # between the SSMUs.
 #

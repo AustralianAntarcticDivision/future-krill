@@ -1,0 +1,94 @@
+
+R version 3.6.1 (2019-07-05) -- "Action of the Toes"
+Copyright (C) 2019 The R Foundation for Statistical Computing
+Platform: x86_64-pc-linux-gnu (64-bit)
+
+R is free software and comes with ABSOLUTELY NO WARRANTY.
+You are welcome to redistribute it under certain conditions.
+Type 'license()' or 'licence()' for distribution details.
+
+  Natural language support but running in an English locale
+
+R is a collaborative project with many contributors.
+Type 'contributors()' for more information and
+'citation()' on how to cite R or R packages in publications.
+
+Type 'demo()' for some demos, 'help()' for on-line help, or
+'help.start()' for an HTML browser interface to help.
+Type 'q()' to quit R.
+
+> 
+> ## from https://github.com/mdsumner/rk/blob/f92123527e8748c407af647123ab3837315b4b84/in-reverse.R
+> 
+> library(raadtools)
+Loading required package: raster
+Loading required package: sp
+global option 'raadfiles.data.roots' set:
+'/rdsi/PRIVATE/raad/data               2019-11-20 12:35:10
+ /rdsi/PRIVATE/raad/data_local         2019-11-20 12:35:50
+ /rdsi/PRIVATE/raad/data_staging       2019-11-20 12:35:50
+ /rdsi/PRIVATE/raad/data_deprecated    2019-11-20 12:35:50
+ /rdsi/PUBLIC/raad/data                2019-11-20 12:44:37'
+Uploading raad file cache as at 2019-11-20 14:49:13 (860713 files listed) 
+
+Warning message:
+In fun(libname, pkgname) :
+  rgeos: versions of GEOS runtime 3.7.1-CAPI-1.11.1
+and GEOS at installation 3.7.0-CAPI-1.11.0differ
+> x <- readRDS("/perm_storage/home/mdsumner/Git/future-krill/shapes/Area_48_Krill_Domain.rds")
+> 
+> library(silicate)
+
+Attaching package: ‘silicate’
+
+The following object is masked from ‘package:stats’:
+
+    filter
+
+> arc <- ARC(x)
+> 
+> files <- raadfiles::altimetry_currents_polar_files()
+> 
+> 
+> ## TEMPORARY UNTIL CACHE REBUILDS
+> files0 <- fs::dir_ls("/rdsi/PRIVATE/raad/data_local/aad.gov.au/currents/polar", regex = ".*\\.grd$", recurse = TRUE)
+> 
+> 
+> files <- tibble::tibble(ufullname = grep("polar_u", files0, value = TRUE), vfullname = grep("polar_v", files0, value = TRUE))
+> files$date <- as.POSIXct(as.Date(stringr::str_extract(basename(files0), "[0-9]{8}"),
++                                  "%Y%m%d"),tz = "UTC")[grep("polar_u", files0)]
+> 
+> ##
+> 
+> 
+> ifile <- 1
+> 
+> curr <- brick(raster(files$ufullname[ifile]), raster(files$vfullname[ifile]))
+> arc_to_sp <- function(x) {
++   l <- split(x$arc_link_vertex, x$arc_link_vertex$arc_)[unique(x$arc_link_vertex$arc_)]
++ 
++   for (i in seq_along(l)) {
++     l[[i]] <- sp::Lines(list(sp::Line(as.matrix(dplyr::inner_join(l[[i]], arc$vertex, "vertex_") %>% dplyr::select(x_, y_)))), ID = i)
++   }
++   sp::SpatialLines(l, proj4string = raster::crs(x$meta$proj[1]))
++ }
+> 
+> sp <- arc_to_sp(arc)
+> 
+> cells <- tabularaster::cellnumbers(curr, sf::st_transform(sf::st_as_sf(sp), projection(curr)))
+> 
+> xy <- xyFromCell(curr, cells$cell_)
+> l <- vector("list", nrow(files))
+> 
+> for (ifile in seq_along(l)) {
++   curr <- try(brick(raster(files$ufullname[ifile]), raster(files$vfullname[ifile])))
++   if (inherits(curr, "try-error")) next;
++   l[[ifile]] <- extract(curr, cells$cell_)
++   if (ifile %% 500 == 0) print(ifile)
++ 
++   # plot(xy, col = colourvalues::colour_values(vfun(l[[ifile]])),
++   #      pch = 19, cex = .4)
++   #
++ }
+[1] 500
+[1] 1000
