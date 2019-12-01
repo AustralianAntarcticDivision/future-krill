@@ -17,6 +17,8 @@ Type 'demo()' for some demos, 'help()' for on-line help, or
 'help.start()' for an HTML browser interface to help.
 Type 'q()' to quit R.
 
+[Previously saved workspace restored]
+
 > 
 > ## from https://github.com/mdsumner/rk/blob/f92123527e8748c407af647123ab3837315b4b84/in-reverse.R
 > 
@@ -24,12 +26,12 @@ Type 'q()' to quit R.
 Loading required package: raster
 Loading required package: sp
 global option 'raadfiles.data.roots' set:
-'/rdsi/PRIVATE/raad/data               2019-11-20 12:35:10
- /rdsi/PRIVATE/raad/data_local         2019-11-20 12:35:50
- /rdsi/PRIVATE/raad/data_staging       2019-11-20 12:35:50
- /rdsi/PRIVATE/raad/data_deprecated    2019-11-20 12:35:50
- /rdsi/PUBLIC/raad/data                2019-11-20 12:44:37'
-Uploading raad file cache as at 2019-11-20 14:49:13 (860713 files listed) 
+'/rdsi/PRIVATE/raad/data               2019-11-21 10:35:09
+ /rdsi/PRIVATE/raad/data_local         2019-11-21 10:38:27
+ /rdsi/PRIVATE/raad/data_staging       2019-11-21 10:38:27
+ /rdsi/PRIVATE/raad/data_deprecated    2019-11-21 10:38:27
+ /rdsi/PUBLIC/raad/data                2019-11-21 10:49:11'
+Uploading raad file cache as at 2019-11-21 12:03:19 (862605 files listed) 
 
 Warning message:
 In fun(libname, pkgname) :
@@ -51,12 +53,12 @@ The following object is masked from ‘package:stats’:
 > 
 > 
 > ## TEMPORARY UNTIL CACHE REBUILDS
-> files0 <- fs::dir_ls("/rdsi/PRIVATE/raad/data_local/aad.gov.au/currents/polar", regex = ".*\\.grd$", recurse = TRUE)
-> 
-> 
-> files <- tibble::tibble(ufullname = grep("polar_u", files0, value = TRUE), vfullname = grep("polar_v", files0, value = TRUE))
-> files$date <- as.POSIXct(as.Date(stringr::str_extract(basename(files0), "[0-9]{8}"),
-+                                  "%Y%m%d"),tz = "UTC")[grep("polar_u", files0)]
+> # files0 <- fs::dir_ls("/rdsi/PRIVATE/raad/data_local/aad.gov.au/currents/polar", regex = ".*\\.grd$", recurse = TRUE)
+> #
+> #
+> # files <- tibble::tibble(ufullname = grep("polar_u", files0, value = TRUE), vfullname = grep("polar_v", files0, value = TRUE))
+> # files$date <- as.POSIXct(as.Date(stringr::str_extract(basename(files0), "[0-9]{8}"),
+> #                                  "%Y%m%d"),tz = "UTC")[grep("polar_u", files0)]
 > 
 > ##
 > 
@@ -74,8 +76,10 @@ The following object is masked from ‘package:stats’:
 + }
 > 
 > sp <- arc_to_sp(arc)
+> crs <- sf::st_crs(sf::st_as_sf(sp))
+> sf <- sf::st_set_crs(sf::st_segmentize(sf::st_set_crs(sf::st_as_sf(sp), NA), 0.1), crs)
 > 
-> cells <- tabularaster::cellnumbers(curr, sf::st_transform(sf::st_as_sf(sp), projection(curr)))
+> cells <- tabularaster::cellnumbers(curr, sf::st_transform(sf, projection(curr)))
 > 
 > xy <- xyFromCell(curr, cells$cell_)
 > l <- vector("list", nrow(files))
@@ -92,3 +96,26 @@ The following object is masked from ‘package:stats’:
 + }
 [1] 500
 [1] 1000
+[1] 1500
+[1] 2000
+[1] 2500
+[1] 3000
+[1] 3500
+[1] 4000
+[1] 4500
+[1] 5000
+[1] 5500
+[1] 6000
+[1] 6500
+[1] 7000
+[1] 7500
+[1] 8000
+[1] 8500
+[1] 9000
+[1] 9500
+> 
+> saveRDS(l, "currents.rds")
+> 
+> proc.time()
+    user   system  elapsed 
+1137.293   64.444 1530.884 

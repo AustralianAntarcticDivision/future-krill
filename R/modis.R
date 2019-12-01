@@ -42,4 +42,15 @@ read_modis <- function(x, ...) {
 modis_chla <- files %>% group_split() %>% future_map(read_modis)
 
 saveRDS(modis_chla, "modis_chla.rds")
-## read months at a time, careful to map seawifs or modis bins for filter
+
+oc <- ocfiles("monthly", "MODISA", varname = "KD490", type = "L3m")
+x <- as(readRDS("/perm_storage/home/mdsumner/Git/future-krill/shapes/Area_48_Krill_Domain.rds"), "Spatial")
+cells <- tabularaster::cellnumbers(raster(oc$fullname[1]), sf::st_as_sf(x))
+kd <- vector('list', nrow(oc))
+for (i in seq_len(nrow(oc))) {
+  r <- raster::raster(oc$fullname[i], varname = "Kd_490")
+  kd[[i]] <- cells %>% dplyr::mutate(kd = extract(r, cell_)) %>% group_by(object_) %>%
+    summarize(depth = mean(kd, na.rm = TRUE))
+
+}
+saveRDS(kd, "kd_depth.rds")

@@ -4,6 +4,7 @@
 library(raadtools)
 x <- readRDS("/perm_storage/home/mdsumner/Git/future-krill/shapes/Area_48_Krill_Domain.rds")
 
+
 library(silicate)
 arc <- ARC(x)
 
@@ -11,12 +12,12 @@ files <- raadfiles::altimetry_currents_polar_files()
 
 
 ## TEMPORARY UNTIL CACHE REBUILDS
-files0 <- fs::dir_ls("/rdsi/PRIVATE/raad/data_local/aad.gov.au/currents/polar", regex = ".*\\.grd$", recurse = TRUE)
-
-
-files <- tibble::tibble(ufullname = grep("polar_u", files0, value = TRUE), vfullname = grep("polar_v", files0, value = TRUE))
-files$date <- as.POSIXct(as.Date(stringr::str_extract(basename(files0), "[0-9]{8}"),
-                                 "%Y%m%d"),tz = "UTC")[grep("polar_u", files0)]
+# files0 <- fs::dir_ls("/rdsi/PRIVATE/raad/data_local/aad.gov.au/currents/polar", regex = ".*\\.grd$", recurse = TRUE)
+#
+#
+# files <- tibble::tibble(ufullname = grep("polar_u", files0, value = TRUE), vfullname = grep("polar_v", files0, value = TRUE))
+# files$date <- as.POSIXct(as.Date(stringr::str_extract(basename(files0), "[0-9]{8}"),
+#                                  "%Y%m%d"),tz = "UTC")[grep("polar_u", files0)]
 
 ##
 
@@ -34,9 +35,11 @@ arc_to_sp <- function(x) {
 }
 
 sp <- arc_to_sp(arc)
+crs <- sf::st_crs(sf::st_as_sf(sp))
+sf <- sf::st_set_crs(sf::st_segmentize(sf::st_set_crs(sf::st_as_sf(sp), NA), 0.1), crs)
 
-cells <- tabularaster::cellnumbers(curr, sf::st_transform(sf::st_as_sf(sp), projection(curr)))
-
+cells <- tabularaster::cellnumbers(curr, sf::st_transform(sf, projection(curr)))
+saveRDS(cells, "cells_Polar_lines.rds")
 xy <- xyFromCell(curr, cells$cell_)
 l <- vector("list", nrow(files))
 
