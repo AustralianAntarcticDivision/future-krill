@@ -22,8 +22,16 @@ date <- seq(as.Date("1981-12-15"), by = "1 month", length.out = length(d))
 for (i in seq_along(d)) {
   if (nrow(d[[i]]) > 0) d[[i]]$date <- date[i]
 }
+
 dsst <- dplyr::bind_rows(d) %>% dplyr::rename(sst_n = n, poly = object_)
-saveRDS(dplyr::left_join(dsst, dchl), "chl_sst.rds")
+
+kd <- readRDS("kd_depth.rds")
+oc <- ocfiles("monthly", "MODISA", varname = "KD490", type = "L3m")
+for (i in seq_along(kd)) kd[[i]]$date <- as.Date(oc$date[i])
+kd <- dplyr::rename(dplyr::bind_rows(kd), poly = object_, kd = depth)
+
+
+saveRDS(dplyr::left_join(dplyr::left_join(dsst, dchl), kd) , "chl_sst.rds")
 
 ## ice
 d <- readRDS("R/nsidc.rds")
