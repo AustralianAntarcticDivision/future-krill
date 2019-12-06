@@ -52,6 +52,7 @@ curr <- brick(raadfiles::altimetry_currents_polar_files()$ufullname[1])
 d <- readRDS("R/currents.rds")
 date <- seq(as.Date("1993-01-01"), by = "1 day", length.out = length(d))
 library(raadtools)
+library(dplyr)
 segmentize <- function(x, d) {
   crs <- sf::st_crs(x)
   sf::st_set_crs(sf::st_segmentize(sf::st_set_crs(x, NA), d), crs)
@@ -81,13 +82,12 @@ for (i in seq_along(flux)) {
  exch <- cbind(src = src, tar = tar, mag = sqrt(dxy[,1] ^2 + dxy[,2]^2))
  bad <- exch[,1] == exch[,2] | exch[,1] == 0 | exch[,2] == 0
  exch[bad, 3] <- NA
- flux[[i]] <- tibble::as_tibble(exch[!is.na(exch[,3]), ]) %>% group_by(src, tar) %>% summarize(flux = sum(mag))
+ flux[[i]] <- tibble::as_tibble(exch[!is.na(exch[,3]), ]) %>% group_by(src, tar) %>% summarize(flux = sum(mag)) %>% ungroup()
 }
-saveRDS(flux, "R/flux_.rds")
 cfiles <- raadfiles::altimetry_currents_polar_files()
-flux <- readRDS("R/flux_.rds")
 for (i in seq_along(flux)) {
   flux[[i]]$date <- cfiles$date[i]
 }
+#saveRDS(flux, "R/flux_.rds")
 
 saveRDS(dplyr::bind_rows(flux), "flux_pairs.rds")
