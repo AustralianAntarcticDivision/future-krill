@@ -6,6 +6,7 @@ output: html_document
 ---
 
 ```{r setup, include=FALSE}
+## render with  rmarkdown::render("future-krill-data.Rmd", "md_document")
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
@@ -95,7 +96,21 @@ flux <- readRDS("flux_pairs.rds")
 flux
 ```
 
-TODO: shared boundary lengths between polygons
+## Boundary lengths
+
+The shared boundary lengths between polygons are found by 
+
+* decomposing polygons to edges (using `silicate::SC`)
+* calculating every edge length (in metres, assuming rhumb distance of constant bearing)
+* grouping lengths by object pairs, and sum
+
+`object1` and `object1` are the row index of the regions data frame (`x` above)
+
+
+```{r boundaries}
+boundaries <- readRDS("shared_boundary_lengths.rds")
+boundaries
+```
 
 
 

@@ -119,10 +119,6 @@ Surface Temperature product provided by NOAA.
     chl_sst <- readRDS("chl_sst.rds")
     chl_sst
 
-    ## Registered S3 method overwritten by 'cli':
-    ##   method     from    
-    ##   print.boxx spatstat
-
     ## # A tibble: 18,614 x 7
     ##     poly    sst sst_n date        chla nbins    kd
     ##    <dbl>  <dbl> <int> <date>     <dbl> <int> <dbl>
@@ -200,4 +196,33 @@ calculate the *sum of flux magnitude* between polygons.
     ## 10     8     7 26902. 1993-01-01 00:00:00
     ## # … with 578,927 more rows
 
-TODO: shared boundary lengths between polygons
+Boundary lengths
+----------------
+
+The shared boundary lengths between polygons are found by
+
+-   decomposing polygons to edges (using `silicate::SC`)
+-   calculating every edge length (in metres, assuming rhumb distance of
+    constant bearing)
+-   grouping lengths by object pairs, and sum
+
+`object1` and `object1` are the row index of the regions data frame (`x`
+above)
+
+    boundaries <- readRDS("shared_boundary_lengths.rds")
+    boundaries
+
+    ## # A tibble: 81 x 3
+    ##    object1 object2 distance
+    ##      <int>   <int>    <dbl>
+    ##  1      26      27  345090.
+    ##  2      16      21   87115.
+    ##  3      16      22  146988.
+    ##  4      16      19  197758.
+    ##  5      16      17  132212.
+    ##  6      13      14  409937.
+    ##  7      18      23   61423.
+    ##  8      18      20  190859.
+    ##  9      18      19   92748.
+    ## 10      28      31  335016.
+    ## # … with 71 more rows
